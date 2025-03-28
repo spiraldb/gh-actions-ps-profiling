@@ -16,7 +16,7 @@ inputs:
   profiling_frequency:
     description: 'The frequency at which profiling data is collected. Parca Agent defaults to 19, but to gather more data in CI we recommend a higher frequency.'
     required: false
-    default: 99
+    default: '99'
   profiling_duration:
     description: 'The agent profiling duration to use, cycle to send profiling data.'
     required: false
@@ -33,8 +33,12 @@ runs:
     - name: Install Parca Agent
       shell: bash
       run: |
-        curl --connect-timeout 5 --max-time 60 --retry 5 --retry-delay 0 --retry-max-time 600 -sL https://github.com/parca-dev/parca-agent/releases/download/v${{ inputs.parca_agent_version }}/parca-agent_${{ inputs.parca_agent_version }}_`uname -s`_`uname -m` > parca-agent
-        chmod +x ./parca-agent
-    - name: Run parca agent in background
+        if ! [ -f ./parca-agent ]; then
+          curl --connect-timeout 5 --max-time 60 --retry 5 --retry-delay 0 --retry-max-time 600 -sL https://github.com/parca-dev/parca-agent/releases/download/v${{ inputs.parca_agent_version }}/parca-agent_${{ inputs.parca_agent_version }}_`uname -s`_`uname -m` > parca-agent
+          chmod +x ./parca-agent
+        else
+          echo "parca-agent already available"
+        fi
+    - name: Run Parca agent in background
       shell: bash
       run: sudo ./parca-agent --metadata-external-labels='${{ inputs.labels }}' --profiling-duration=${{ inputs.profiling_duration }} --profiling-cpu-sampling-frequency=${{ inputs.profiling_frequency }} --node=github --remote-store-address=${{ inputs.store_address }} --remote-store-bearer-token=${{ inputs.polarsignals_cloud_token }} ${{ inputs.extra_args }} > ${{ runner.temp }}/parca-agent.log 2>&1 &
